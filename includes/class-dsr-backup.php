@@ -73,14 +73,13 @@ class DSR_Backup {
 		global $wpdb;
 
 		// Table structure.
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Table name validated via regex; SHOW CREATE TABLE does not support placeholders; caching not applicable for backup dump.
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.Security.EscapeOutput.OutputNotEscaped
 		$create = $wpdb->get_row( "SHOW CREATE TABLE `{$table}`", ARRAY_N );
 		if ( $create ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Raw SQL DDL output for .sql backup file, not HTML context.
 			echo "DROP TABLE IF EXISTS `" . esc_sql( $table ) . "`;\n";
-			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Raw SQL DDL required for backup.
 			echo $create[1] . ";\n\n";
 		}
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		// Table data — fetch in chunks to keep memory low.
 		$offset   = 0;

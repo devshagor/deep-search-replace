@@ -24,10 +24,17 @@ class DSR_Admin {
 	}
 
 	/**
+	 * The admin page hook suffix.
+	 *
+	 * @var string|false
+	 */
+	private static $hook = false;
+
+	/**
 	 * Register the admin menu item under Tools.
 	 */
 	public static function register_menu() {
-		$hook = add_management_page(
+		self::$hook = add_management_page(
 			__( 'Deep Search & Replace', 'deep-search-replace' ),
 			__( 'Deep Search & Replace', 'deep-search-replace' ),
 			'manage_options',
@@ -35,19 +42,26 @@ class DSR_Admin {
 			array( __CLASS__, 'render_page' )
 		);
 
-		if ( $hook ) {
-			add_action( 'admin_enqueue_scripts', function ( $hook_suffix ) use ( $hook ) {
-				if ( $hook_suffix !== $hook ) {
-					return;
-				}
-				wp_enqueue_style(
-					'dsr-admin',
-					DSR_PLUGIN_URL . 'admin/css/admin-style.css',
-					array(),
-					DSR_VERSION
-				);
-			} );
+		if ( self::$hook ) {
+			add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_styles' ) );
 		}
+	}
+
+	/**
+	 * Enqueue admin styles on the plugin page only.
+	 *
+	 * @param string $hook_suffix The current admin page hook suffix.
+	 */
+	public static function enqueue_styles( $hook_suffix ) {
+		if ( $hook_suffix !== self::$hook ) {
+			return;
+		}
+		wp_enqueue_style(
+			'dsr-admin',
+			DSR_PLUGIN_URL . 'admin/css/admin-style.css',
+			array(),
+			DSR_VERSION
+		);
 	}
 
 	/**

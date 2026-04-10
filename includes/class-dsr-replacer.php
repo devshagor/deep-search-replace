@@ -48,10 +48,7 @@ class DSR_Replacer {
 	 *
 	 * @var string
 	 */
-	private static $url_pattern = '#
-		(?:https?://|//)           # http:// or https:// or protocol-relative
-		[^\s<>"\'`\)\]\},;]+       # URL body
-	#xi';
+	private static $url_pattern = '~(?:https?://|//)[^\s<>"\'`\)\]\},;]+~i';
 
 	/**
 	 * Process search/replace across all database tables.
@@ -336,7 +333,7 @@ class DSR_Replacer {
 		// Extract URLs, replace with placeholders, do the replacement, restore URLs.
 		$placeholders = array();
 		$counter      = 0;
-		$prefix       = "\x00DSR_URL_" . mt_rand( 100000, 999999 ) . '_'; // phpcs:ignore WordPress.WP.AlternativeFunctions.rand_mt_rand -- Not used for security; just a collision-avoidance prefix.
+		$prefix       = "\x00DSR_URL_" . wp_rand( 100000, 999999 ) . '_';
 
 		$protected = preg_replace_callback(
 			self::$url_pattern,

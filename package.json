@@ -1,0 +1,12 @@
+{
+	"name": "deep-search-replace",
+	"version": "1.0.0",
+	"description": "Build tools for Deep Search & Replace WordPress plugin.",
+	"private": true,
+	"scripts": {
+		"prebuild": "echo '\\n=========================================\\n Building deep-search-replace\\n========================================='",
+		"build": "npm run clean && npm run zip",
+		"clean": "rm -rf build",
+		"zip": "mkdir -p build && cd build && rsync -rc --exclude='.*' --exclude='node_modules' --exclude='package.json' --exclude='package-lock.json' --exclude='build' --exclude='README.md' ../ deep-search-replace/ && zip -rq deep-search-replace.zip deep-search-replace/ && rm -rf deep-search-replace && echo '\\n=========================================' && echo ' Build complete!' && echo '=========================================' && echo '' && echo \" ZIP: build/deep-search-replace.zip ($(du -h deep-search-replace.zip | awk '{print $1}'))\" && echo '' && echo ' Ready to upload to WordPress.org!' && echo '========================================='"
+	}
+}

@@ -1,5 +1,5 @@
 === Deep Search & Replace ===
-Contributors: webappick
+Contributors: shagors
 Tags: search, replace, database, url, migration
 Requires at least: 5.0
 Tested up to: 6.9

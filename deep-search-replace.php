@@ -4,8 +4,8 @@
  * Plugin URI:        https://developer.wordpress.org/plugins/deep-search-replace/
  * Description:       Searches ALL database tables for a URL/text and replaces it. Finds links hidden in serialized data, post meta, options, widgets, and more.
  * Version:           1.0.0
- * Author:            WebAppick
- * Author URI:        https://webappick.com/
+ * Author:            devshagor
+ * Author URI:        https://profiles.wordpress.org/shagors/
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       deep-search-replace
@@ -17,6 +17,19 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+/**
+ * Add Settings link on the plugins list page.
+ *
+ * @param array $links Existing action links.
+ * @return array Modified action links.
+ */
+function deep_search_replace_action_links( $links ) {
+	$settings_link = '<a href="' . esc_url( admin_url( 'tools.php?page=deep-search-replace' ) ) . '">' . esc_html__( 'Settings', 'deep-search-replace' ) . '</a>';
+	$links[] = $settings_link;
+	return $links;
+}
+add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'deep_search_replace_action_links' );
 
 /**
  * Redirect to the plugin page on activation.

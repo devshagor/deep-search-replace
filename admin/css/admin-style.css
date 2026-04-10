@@ -76,6 +76,29 @@
 	color: #1d2327;
 	margin-bottom: 6px;
 }
+.dsr-checkbox-field {
+	background: #f0f6fc;
+	border: 1px solid #c3d7e8;
+	border-radius: 6px;
+	padding: 12px 16px;
+}
+.dsr-checkbox-field label {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-weight: 600;
+	margin-bottom: 2px;
+	cursor: pointer;
+}
+.dsr-checkbox-field input[type="checkbox"] {
+	width: 16px;
+	height: 16px;
+	margin: 0;
+	cursor: pointer;
+}
+.dsr-checkbox-field .dsr-field-hint {
+	margin-left: 24px;
+}
 .dsr-field input[type="text"] {
 	width: 100%;
 	padding: 10px 14px;
@@ -205,6 +228,30 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+/* Skipped Row */
+.dsr-results-table tbody tr.dsr-row-skipped {
+	background: #fffbeb;
+	opacity: 0.85;
+}
+.dsr-results-table tbody tr.dsr-row-skipped:hover {
+	background: #fef9c3;
+}
+.dsr-badge-skipped {
+	display: inline-block;
+	font-size: 10px;
+	font-weight: 600;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	color: #92400e;
+	background: #fef3c7;
+	border: 1px solid #fde68a;
+	padding: 1px 6px;
+	border-radius: 3px;
+	margin-left: 6px;
+	vertical-align: middle;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
 }
 
 /* Summary Bar */

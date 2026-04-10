@@ -77,18 +77,20 @@ class DSR_Admin {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'deep-search-replace' ) );
 		}
 
-		$search  = '';
-		$replace = '';
-		$action  = '';
-		$results = null;
+		$search    = '';
+		$replace   = '';
+		$action    = '';
+		$skip_urls = true;
+		$results   = null;
 
 		if ( isset( $_POST['dsr_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['dsr_nonce'] ) ), 'dsr_action' ) ) {
-			$search  = isset( $_POST['dsr_search'] ) ? sanitize_text_field( wp_unslash( $_POST['dsr_search'] ) ) : '';
-			$replace = isset( $_POST['dsr_replace'] ) ? sanitize_text_field( wp_unslash( $_POST['dsr_replace'] ) ) : '';
-			$action  = isset( $_POST['dsr_action'] ) ? sanitize_text_field( wp_unslash( $_POST['dsr_action'] ) ) : '';
+			$search    = isset( $_POST['dsr_search'] ) ? sanitize_text_field( wp_unslash( $_POST['dsr_search'] ) ) : '';
+			$replace   = isset( $_POST['dsr_replace'] ) ? sanitize_text_field( wp_unslash( $_POST['dsr_replace'] ) ) : '';
+			$action    = isset( $_POST['dsr_action'] ) ? sanitize_text_field( wp_unslash( $_POST['dsr_action'] ) ) : '';
+			$skip_urls = ! empty( $_POST['dsr_skip_urls'] );
 
 			if ( ! empty( $search ) && in_array( $action, array( 'search', 'replace' ), true ) ) {
-				$results = DSR_Replacer::process( $search, $replace, $action );
+				$results = DSR_Replacer::process( $search, $replace, $action, $skip_urls );
 			}
 		}
 

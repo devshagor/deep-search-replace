@@ -20,11 +20,46 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DSR_Replacer {
 
 	/**
+	 * Whether to protect slugs and URLs during replacement.
+	 *
+	 * @var bool
+	 */
+	private static $skip_urls = false;
+
+	/**
+	 * Column names that store slugs, permalinks, or identifiers.
+	 * These columns are skipped entirely when "Skip URLs" is enabled,
+	 * because modifying them breaks permalinks and causes 404 errors.
+	 *
+	 * @var array
+	 */
+	private static $protected_columns = array(
+		'post_name',      // Post/page slug.
+		'guid',           // Permanent post identifier URL.
+		'slug',           // Term slug (wp_terms).
+		'user_login',     // Username.
+		'user_nicename',  // URL-safe username slug.
+		'user_email',     // Email address.
+		'comment_agent',  // Browser user agent.
+	);
+
+	/**
+	 * URL pattern for protecting URLs within text content.
+	 *
+	 * @var string
+	 */
+	private static $url_pattern = '#
+		(?:https?://|//)           # http:// or https:// or protocol-relative
+		[^\s<>"\'`\)\]\},;]+       # URL body
+	#xi';
+
+	/**
 	 * Process search/replace across all database tables.
 	 *
-	 * @param string $search  The string to search for.
-	 * @param string $replace The replacement string.
-	 * @param string $action  Either 'search' or 'replace'.
+	 * @param string $search    The string to search for.
+	 * @param string $replace   The replacement string.
+	 * @param string $action    Either 'search' or 'replace'.
+	 * @param bool   $skip_urls Whether to protect slugs and URLs.
 	 * @return array {
 	 *     @type bool  $is_replace    Whether this was a replace action.
 	 *     @type int   $total_found   Total occurrences found.
@@ -32,8 +67,10 @@ class DSR_Replacer {
 	 *     @type array $rows_data     Per-column result rows.
 	 * }
 	 */
-	public static function process( $search, $replace, $action ) {
+	public static function process( $search, $replace, $action, $skip_urls = false ) {
 		global $wpdb;
+
+		self::$skip_urls = $skip_urls;
 
 		$is_replace     = ( 'replace' === $action && '' !== $replace );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- SHOW TABLES has no WP API equivalent; result is used once per request.
@@ -74,6 +111,9 @@ class DSR_Replacer {
 
 				$total_found += (int) $found;
 
+				// Check if this column is protected (slug/permalink column).
+				$is_protected = $is_replace && self::$skip_urls && in_array( $col_name, self::$protected_columns, true );
+
 				$sample = $wpdb->get_var(
 					$wpdb->prepare(
 						"SELECT `{$col_name}` FROM `{$table}` WHERE `{$col_name}` LIKE %s LIMIT 1",
@@ -86,7 +126,7 @@ class DSR_Replacer {
 				$sample_short   = mb_substr( wp_strip_all_tags( $sample ), 0, 120 ) . '...';
 				$replaced_count = 0;
 
-				if ( $is_replace ) {
+				if ( $is_replace && ! $is_protected ) {
 					$replaced_count = self::replace_in_column( $table, $col_name, $columns, $search, $replace, (int) $found );
 					$total_replaced += $replaced_count;
 				}
@@ -97,6 +137,7 @@ class DSR_Replacer {
 					'found'          => (int) $found,
 					'replaced_count' => $replaced_count,
 					'sample_short'   => $sample_short,
+					'skipped'        => $is_protected,
 				);
 			}
 		}
@@ -167,9 +208,45 @@ class DSR_Replacer {
 			return $replaced_count;
 		}
 
+		// No primary key — when skip_urls is enabled, we must fetch rows individually
+		// since SQL REPLACE cannot selectively skip URLs.
+		if ( self::$skip_urls ) {
+			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT * FROM `{$table}` WHERE `{$col_name}` LIKE %s",
+					'%' . $wpdb->esc_like( $search ) . '%'
+				),
+				ARRAY_A
+			);
+			// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
+
+			$replaced_count = 0;
+			foreach ( $rows as $row ) {
+				$old_val = $row[ $col_name ];
+				$new_val = self::recursive_replace( $search, $replace, $old_val );
+				if ( $old_val !== $new_val ) {
+					$where = $row;
+					unset( $where[ $col_name ] );
+					if ( ! empty( $where ) ) {
+						// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+						$wpdb->update(
+							$table,
+							array( $col_name => $new_val ),
+							$where
+						);
+						// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+						++$replaced_count;
+					}
+				}
+			}
+
+			return $replaced_count;
+		}
+
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 
-		// No primary key — use direct SQL replace.
+		// No primary key and skip_urls off — use direct SQL replace.
 		$wpdb->query(
 			$wpdb->prepare(
 				"UPDATE `{$table}` SET `{$col_name}` = REPLACE(`{$col_name}`, %s, %s) WHERE `{$col_name}` LIKE %s",
@@ -202,7 +279,7 @@ class DSR_Replacer {
 		}
 
 		if ( is_string( $data ) ) {
-			return str_replace( $search, $replace, $data );
+			return self::safe_str_replace( $search, $replace, $data );
 		}
 
 		return $data;
@@ -229,9 +306,60 @@ class DSR_Replacer {
 			if ( is_serialized( $data ) ) {
 				return self::recursive_replace( $search, $replace, $data );
 			}
-			$data = str_replace( $search, $replace, $data );
+			$data = self::safe_str_replace( $search, $replace, $data );
 		}
 
 		return $data;
+	}
+
+	/**
+	 * Replace a string while optionally protecting URLs within text content.
+	 *
+	 * When skip_urls is enabled, inline URLs (http/https links) found inside
+	 * longer text are extracted, replaced with placeholders, the search/replace
+	 * runs on the remaining text, and then URLs are restored.
+	 *
+	 * Note: Slug columns (post_name, guid, etc.) are already skipped entirely
+	 * at the column level — this method handles URLs embedded in post content,
+	 * meta values, widget text, etc.
+	 *
+	 * @param string $search  Search string.
+	 * @param string $replace Replace string.
+	 * @param string $data    The string to process.
+	 * @return string Processed string.
+	 */
+	private static function safe_str_replace( $search, $replace, $data ) {
+		if ( ! self::$skip_urls || strpos( $data, $search ) === false ) {
+			return str_replace( $search, $replace, $data );
+		}
+
+		// Extract URLs, replace with placeholders, do the replacement, restore URLs.
+		$placeholders = array();
+		$counter      = 0;
+		$prefix       = "\x00DSR_URL_" . mt_rand( 100000, 999999 ) . '_'; // phpcs:ignore WordPress.WP.AlternativeFunctions.rand_mt_rand -- Not used for security; just a collision-avoidance prefix.
+
+		$protected = preg_replace_callback(
+			self::$url_pattern,
+			function ( $match ) use ( &$placeholders, &$counter, $prefix ) {
+				$key                  = $prefix . $counter . "\x00";
+				$placeholders[ $key ] = $match[0];
+				++$counter;
+				return $key;
+			},
+			$data
+		);
+
+		// If regex failed, fall back to plain replace.
+		if ( null === $protected ) {
+			return str_replace( $search, $replace, $data );
+		}
+
+		// Perform the replacement on the protected string (URLs are now placeholders).
+		$result = str_replace( $search, $replace, $protected );
+
+		// Restore the original URLs.
+		$result = str_replace( array_keys( $placeholders ), array_values( $placeholders ), $result );
+
+		return $result;
 	}
 }

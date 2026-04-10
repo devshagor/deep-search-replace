@@ -4,9 +4,10 @@
  *
  * @package Deep_Search_Replace
  *
- * @var string     $search  Current search string.
- * @var string     $replace Current replace string.
- * @var array|null $results Results from DSR_Replacer::process() or null.
+ * @var string     $search    Current search string.
+ * @var string     $replace   Current replace string.
+ * @var bool       $skip_urls Whether to skip URLs during replacement.
+ * @var array|null $results   Results from DSR_Replacer::process() or null.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -70,6 +71,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 					placeholder="https://new-url.com/page/"
 				/>
 				<p class="dsr-field-hint"><?php esc_html_e( 'Leave empty if you only want to search. Handles serialized data safely.', 'deep-search-replace' ); ?></p>
+			</div>
+			<div class="dsr-field dsr-checkbox-field">
+				<label for="dsr_skip_urls">
+					<input
+						type="checkbox"
+						id="dsr_skip_urls"
+						name="dsr_skip_urls"
+						value="1"
+						<?php checked( $skip_urls ); ?>
+					/>
+					<?php esc_html_e( 'Protect slugs & URLs (recommended)', 'deep-search-replace' ); ?>
+				</label>
+				<p class="dsr-field-hint"><?php esc_html_e( 'Skips slug columns (post_name, guid, term slug) and protects inline URLs in content. Prevents 404 errors and broken links when replacing plain text.', 'deep-search-replace' ); ?></p>
 			</div>
 			<div class="dsr-actions">
 				<button type="submit" name="dsr_action" value="search" class="dsr-btn dsr-btn-secondary">

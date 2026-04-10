@@ -38,12 +38,23 @@ $deep_sr_rows_data      = $results['rows_data'];
 		</thead>
 		<tbody>
 			<?php foreach ( $deep_sr_rows_data as $deep_sr_row ) : ?>
-				<tr>
+				<tr<?php echo ! empty( $deep_sr_row['skipped'] ) ? ' class="dsr-row-skipped"' : ''; ?>>
 					<td><span class="dsr-table-name"><?php echo esc_html( $deep_sr_row['table'] ); ?></span></td>
-					<td><span class="dsr-col-name"><?php echo esc_html( $deep_sr_row['col_name'] ); ?></span></td>
+					<td>
+						<span class="dsr-col-name"><?php echo esc_html( $deep_sr_row['col_name'] ); ?></span>
+						<?php if ( ! empty( $deep_sr_row['skipped'] ) ) : ?>
+							<span class="dsr-badge-skipped"><?php esc_html_e( 'Skipped — slug/permalink', 'deep-search-replace' ); ?></span>
+						<?php endif; ?>
+					</td>
 					<td class="dsr-count"><?php echo (int) $deep_sr_row['found']; ?></td>
 					<?php if ( $deep_sr_is_replace ) : ?>
-						<td class="dsr-replaced-count"><?php echo (int) $deep_sr_row['replaced_count']; ?></td>
+						<td class="dsr-replaced-count">
+							<?php if ( ! empty( $deep_sr_row['skipped'] ) ) : ?>
+								—
+							<?php else : ?>
+								<?php echo (int) $deep_sr_row['replaced_count']; ?>
+							<?php endif; ?>
+						</td>
 					<?php endif; ?>
 					<td><span class="dsr-sample"><?php echo esc_html( $deep_sr_row['sample_short'] ); ?></span></td>
 				</tr>
